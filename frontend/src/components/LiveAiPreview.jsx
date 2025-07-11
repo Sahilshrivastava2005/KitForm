@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import axios from "axios";
 import { themes } from "../assets/themes";
 import formbg from "../assets/formbg";
@@ -15,37 +16,30 @@ const toTitleCase = (str = "") =>
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function LiveAiPreview() {
-  const [userId, setUserId] = useState(null);
+  const { ownerid, formid } = useParams();
   const [jsonForm, setJsonForm] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState("light");
   const [selectedBg, setSelectedBg] = useState("none");
   const [formData, setFormData] = useState({});
 
-  /* ────────────── Get user from localStorage ────────────── */
+  /* ────────────── Fetch specific form ────────────── */
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (user?._id) setUserId(user._id);
-    else console.warn("No user ID found in localStorage");
-  }, []);
-
-  /* ────────────── Fetch latest form by user ────────────── */
-  useEffect(() => {
-    if (!userId) return;
+    if (!ownerid || !formid) return;
 
     const fetchForm = async () => {
       try {
-        const res = await axios.get(`http://localhost:3000/api/user-forms/${userId}`);
+        const res = await axios.get(`http://localhost:3000/api/user-forms/${ownerid}`);
         const { forms = [] } = res.data;
 
-        if (!forms.length) {
+        const matchedForm = forms.find((f) => f._id === formid);
+        if (!matchedForm) {
           setJsonForm(null);
           return;
         }
 
-        const latestForm = forms.at(-1);
-        setJsonForm(latestForm);
-        setSelectedTheme(latestForm.theme || "dark");
-        setSelectedBg(latestForm.backgroundColor || "none");
+        setJsonForm(matchedForm);
+        setSelectedTheme(matchedForm.theme || "dark");
+        setSelectedBg(matchedForm.backgroundColor || "none");
         setFormData({});
       } catch (err) {
         console.error("Error fetching form preview:", err);
@@ -54,7 +48,7 @@ export default function LiveAiPreview() {
     };
 
     fetchForm();
-  }, [userId]);
+  }, [ownerid, formid]);
 
   /* ────────────── Input change handler ────────────── */
   const handleChange = (e) => {
@@ -83,16 +77,14 @@ export default function LiveAiPreview() {
   /* ────────────── Form submission handler ────────────── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.table(formData);
-    console.log(userId);
-    if (!userId || !jsonForm?._id) {
-      alert("Missing user or form information.");
+    if (!ownerid || !formid) {
+      alert("Missing form information.");
       return;
     }
 
     try {
       await axios.post(
-        `http://localhost:3000/api/forms/${userId}/${jsonForm._id}/responses`,
+        `http://localhost:3000/api/forms/${ownerid}/${formid}/responses`,
         { data: formData }
       );
       alert("Form submitted successfully! 🎉");
@@ -102,12 +94,14 @@ export default function LiveAiPreview() {
       alert("Something went wrong — check the console.");
     }
   };
+
   if (!jsonForm) {
     return <div className="text-center py-10">Loading form preview…</div>;
   }
 
   const t = themes[selectedTheme] || themes.light;
   const bgi = formbg[selectedBg] || "";
+
   return (
     <form onSubmit={handleSubmit} className={`border p-5 w-full ${bgi}`}>
       <div className={`max-w-2xl mx-auto rounded-lg p-4 shadow-md ${t.base} ${t.form}`}>

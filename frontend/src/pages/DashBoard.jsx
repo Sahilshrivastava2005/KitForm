@@ -7,7 +7,12 @@ import PaymentPlans from '../components/PaymentPlans';
 
 export default function DashBoard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentSection, setCurrentSection] = useState("myForms"); // "myForms", "responses", etc.
+  const [currentSection, setCurrentSection] = useState("myForms");
+  const [refreshCount, setRefreshCount] = useState(0);
+
+  const handleFormCreated = () => {
+    setRefreshCount(prev => prev + 1);
+  };
 
   return (
     <div className="flex h-screen">
@@ -15,14 +20,21 @@ export default function DashBoard() {
       <div className={`fixed inset-0 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />
         <div className="relative z-50 w-64 bg-white h-full">
-          <SideBar onSectionChange={setCurrentSection} currentSection={currentSection} />
-
+          <SideBar
+            onSectionChange={setCurrentSection}
+            currentSection={currentSection}
+            refreshCount={refreshCount}
+          />
         </div>
       </div>
 
       {/* Static Sidebar for md+ */}
       <div className="hidden md:block w-64">
-        <SideBar onSectionChange={setCurrentSection} />
+        <SideBar
+          onSectionChange={setCurrentSection}
+          currentSection={currentSection}
+          refreshCount={refreshCount}
+        />
       </div>
 
       {/* Main Content */}
@@ -39,10 +51,9 @@ export default function DashBoard() {
 
         {/* Render selected section */}
         {currentSection === 'createForm' && <CreateForm />}
-        {currentSection === 'myForms' && <Myform />}
+        {currentSection === 'myForms' && <Myform onFormCreated={handleFormCreated} />}
         {currentSection === 'responses' && <Responses />}
-        {currentSection === 'analytics' && <div className="p-4">Analytics (coming soon)</div>}
-        {currentSection === 'PaymentPlans' && <PaymentPlans/>}
+        {currentSection === 'PaymentPlans' && <PaymentPlans />}
       </div>
     </div>
   );

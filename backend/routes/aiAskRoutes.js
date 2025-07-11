@@ -3,7 +3,7 @@ const router = express.Router();
 const { runGemini } = require('../config/gemini'); 
 const User = require('../models/user-model');
 
-const description = "On the basis of the description, return ONLY raw JSON.No markdown, no triple backticks, no extra text.Include: formTitle, formSubheading, formName, and formFields (array).Each formField must have: fieldName, formLabel(required), placeholder (if needed), type, and required.If type is radio or select, include options with { label, value }.";
+const description = "On the basis of the description proper fieldLabel, return ONLY raw JSON.No markdown, no triple backticks, no extra text.Include: formTitle, formSubheading, formName, and formFields (array).Each formField must have: fieldName, fieldLabel(required), placeholder (if needed), type, and required.If type is radio or select, include options with { label, value }.";
 
 router.post("/ask", async (req, res) => {
   try {
@@ -35,7 +35,7 @@ router.post("/ask", async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
     }
-
+    console.log(generatedForm);
     res.json({ success: true, savedForm: generatedForm });
 
   } catch (err) {

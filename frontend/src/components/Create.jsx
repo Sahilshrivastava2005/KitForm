@@ -1,13 +1,11 @@
 import { useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
-export default function Create() {
+export default function Create({ onFormCreated }) {
   const [open, setOpen] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user'));
   const userId = user?._id;
@@ -28,9 +26,9 @@ export default function Create() {
       });
 
       if (res.data.success) {
-        const savedForm = res.data.savedForm;
-        navigate('/edit', { state: { form: savedForm } });
         setOpen(false);
+        setUserInput(''); // clear input
+        if (onFormCreated) onFormCreated(); // 🔁 refresh forms list
       } else {
         alert('Form generation failed');
       }

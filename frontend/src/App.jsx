@@ -31,8 +31,8 @@ function App() {
         <Route path="/" element={<LandingPage user={user} setUser={setUser} />} />
         <Route path="/auth" element={<Auth user={user} setUser={setUser} />} />
         <Route path="/dashboard" element={<DashBoard user={user} setUser={setUser} />} />
-        <Route path="/edit" element={<EditForm user={user} setUser={setUser} />} />
-        <Route path="/aiform" element={<LiveAiPreview />} />
+        <Route path="/edit-form/:userId/:formIndex" element={<EditForm user={user} setUser={setUser} />} /> 
+        <Route path="/aiform/:ownerid/:formid" element={<LiveAiPreview />} />
         <Route path="/form/:formId/responses" element={<FormResponse user={user} />} /> {/* ✅ NEW ROUTE */}
       </Routes>
     </Router>

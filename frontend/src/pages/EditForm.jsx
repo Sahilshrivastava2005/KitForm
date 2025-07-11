@@ -3,39 +3,36 @@ import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 import axios from "axios";
 import FormUi from "../components/FormUi";
 import ControllerForm from "../components/ControllerForm";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import ShareDialog from "../components/ShareDialog";
 
 export default function EditForm() {
+  const { userId: paramUserId, formIndex } = useParams();
   const navigate = useNavigate();
   const [jsonForm, setJsonForm] = useState(undefined);
   const [selectedTheme, setSelectedTheme] = useState("dark");
   const [selectedBg, setSelectedBg] = useState("none");
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const userId = user?._id;
+  const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const userId = paramUserId || localUser?._id;
 
-  /* ─────────────────────────────
-     Load latest form on mount
-  ───────────────────────────── */
   useEffect(() => {
     const fetchForm = async () => {
-      if (!userId) {
+      if (!userId || formIndex == null) {
         setJsonForm(null);
         return;
       }
 
       try {
-        const res = await axios.get(`http://localhost:3000/api/user-forms/${userId}`);
-        const forms = res.data.forms;
+        const res = await axios.get(
+          `http://localhost:3000/api/user-forms/${userId}/${formIndex}`
+        );
+        const form = res.data;
 
-        if (forms?.length) {
-          const latest = forms[forms.length - 1];
-          setJsonForm(latest);
-          setSelectedTheme(latest.theme || "dark");
-          setSelectedBg(latest.backgroundColor || "none");
-        } else {
-          setJsonForm(null);
-        }
+        setJsonForm(form);
+        setSelectedTheme(form.theme || "dark");
+        setSelectedBg(form.backgroundColor || "none");
       } catch (err) {
         console.error("Error loading form:", err);
         setJsonForm(null);
@@ -43,11 +40,8 @@ export default function EditForm() {
     };
 
     fetchForm();
-  }, [userId]);
+  }, [userId, formIndex]);
 
-  /* ─────────────────────────────
-     Persist theme / background
-  ───────────────────────────── */
   useEffect(() => {
     if (jsonForm) {
       updateUserForm({
@@ -57,22 +51,17 @@ export default function EditForm() {
     }
   }, [selectedTheme, selectedBg]);
 
-  /* ─────────────────────────────
-     PATCH form in DB
-  ───────────────────────────── */
   const updateUserForm = async (partial) => {
     try {
-      await axios.put(`http://localhost:3000/api/user-forms/update/${userId}`, {
-        updatedForm: partial,
-      });
+      await axios.put(
+        `http://localhost:3000/api/user-forms/update/${userId}/${formIndex}`,
+        { updatedForm: partial }
+      );
     } catch (err) {
       console.error("Failed to update form:", err);
     }
   };
 
-  /* ─────────────────────────────
-     Update individual field
-  ───────────────────────────── */
   const onFieldupdate = (value, idx) => {
     if (!jsonForm || !Array.isArray(jsonForm.formFields)) return;
 
@@ -95,21 +84,17 @@ export default function EditForm() {
     updateUserForm({ formFields: updatedFields });
   };
 
-  /* ─────────────────────────────
-     Delete a field by index
-  ───────────────────────────── */
   const deleteFields = (idxToRemove) => {
     if (!jsonForm || !Array.isArray(jsonForm.formFields)) return;
 
-    const updatedFields = jsonForm.formFields.filter((_, i) => i !== idxToRemove);
+    const updatedFields = jsonForm.formFields.filter(
+      (_, i) => i !== idxToRemove
+    );
     const updatedForm = { ...jsonForm, formFields: updatedFields };
     setJsonForm(updatedForm);
     updateUserForm({ formFields: updatedFields });
   };
 
-  /* ─────────────────────────────
-     Loading or empty UI
-  ───────────────────────────── */
   if (jsonForm === undefined) {
     return <div className="p-10 text-gray-700">Loading form...</div>;
   }
@@ -128,9 +113,6 @@ export default function EditForm() {
     );
   }
 
-  /* ─────────────────────────────
-     Final rendered UI
-  ───────────────────────────── */
   return (
     <div className="p-10 min-h-screen">
       {/* Top bar */}
@@ -145,14 +127,26 @@ export default function EditForm() {
 
         <div className="flex gap-3">
           <button
-            onClick={() => navigate("/aiform")}
+            onClick={() => {
+              if (jsonForm && jsonForm._id) {
+                navigate(`/aiform/${userId}/${jsonForm._id}`);
+              }
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Live Preview
           </button>
-          <button className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800">
-            Share
-          </button>
+           <button
+    onClick={() => setShareOpen(true)}
+    className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800"
+  >
+    Share
+  </button>
+          <ShareDialog
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            url={`http://localhost:5173/aiform/${userId}/${jsonForm._id}`}
+          />
         </div>
       </div>
 

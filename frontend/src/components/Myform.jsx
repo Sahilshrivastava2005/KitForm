@@ -3,23 +3,20 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   PencilSquareIcon,
-  PlusIcon,
   TrashIcon,
 } from "@heroicons/react/24/solid";
 import Create from "./Create";
 
-export default function Myform() {
+export default function Myform({ onFormCreated }) {
   const navigate = useNavigate();
-  const [forms, setForms] = useState(undefined); // undefined = loading
+  const [forms, setForms] = useState(undefined);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = user?._id;
 
   const loadForms = async () => {
     if (!userId) return setForms([]);
     try {
-      const res = await axios.get(
-        `http://localhost:3000/api/user-forms/${userId}`
-      );
+      const res = await axios.get(`http://localhost:3000/api/user-forms/${userId}`);
       setForms(res.data.forms || []);
     } catch (err) {
       console.error("Error loading forms:", err);
@@ -33,14 +30,11 @@ export default function Myform() {
 
   const handleDelete = async (idx) => {
     if (!window.confirm("Delete this form permanently?")) return;
-
     const prev = forms;
     setForms((f) => f.filter((_, i) => i !== idx));
-
     try {
-      await axios.delete(
-        `http://localhost:3000/api/user-forms/${userId}/${idx}`
-      );
+      await axios.delete(`http://localhost:3000/api/user-forms/${userId}/${idx}`);
+      if (onFormCreated) onFormCreated(); // Also refresh sidebar
     } catch (err) {
       console.error("Delete failed, reloading forms:", err);
       setForms(prev);
@@ -60,10 +54,12 @@ export default function Myform() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
         <p className="text-gray-600 text-lg">You haven’t created any forms yet.</p>
-       
-         
-          <Create/>
-        
+        <Create
+          onFormCreated={async () => {
+            await loadForms();
+            if (onFormCreated) onFormCreated(); // 👈 Trigger sidebar refresh
+          }}
+        />
       </div>
     );
   }
@@ -72,7 +68,12 @@ export default function Myform() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">My Forms</h1>
-        <Create/>
+        <Create
+          onFormCreated={async () => {
+            await loadForms();
+            if (onFormCreated) onFormCreated(); // 👈 Trigger sidebar refresh
+          }}
+        />
       </div>
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -107,7 +108,7 @@ export default function Myform() {
               </button>
 
               <button
-                onClick={() => navigate(`/edit-form/${idx}`)}
+                onClick={() => navigate(`/edit-form/${userId}/${idx}`)}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 <PencilSquareIcon className="w-4 h-4" />
