@@ -1,63 +1,92 @@
-const userModel=require("../models/user-model");
-const bcrypt=require('bcrypt');
-const generateToken=require('../utils/generateToken');
-module.exports.registerUser=async function(req,res){
-    const {email,password}=req.body;
-    try{
-    let user=await userModel.findOne({email});
-    if(user){
-        return res.status(400).send("Your account already exist");
+const userModel = require("../models/user-model");
+const bcrypt = require("bcrypt");
+const generateToken = require("../utils/generateToken");
+
+module.exports.registerUser = async function (req, res) {
+    const { email, password } = req.body;
+
+    try {
+        const existingUser = await userModel.findOne({ email });
+
+        if (existingUser) {
+            return res.status(400).send("Account already exists.");
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = await userModel.create({
+            email,
+            password: hashedPassword,
+        });
+
+        const token = generateToken({ email });
+        console.log(token);
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        });
+
+        return res.status(201).json({ message: "User registered successfully", user: newUser,token});
+    } catch (err) {
+        console.error(err);
+        return res.status(500).send("Server error during registration.");
     }
-    let salt= await bcrypt.genSalt();
-    let hash=await bcrypt.hash(password,salt);
-    user= await userModel.create({
-        email,
-        password:hash
-    })
-   let token= generateToken({email});
-   res.cookie("token",token,{
-    httpOnly:true,
-    secure:true,
-    maxAge:30*24*60*60*1000
-   })
-   res.status(201).send(user);
-}catch(err){
-    console.log(err);
-}
 };
-module.exports.loginUser=async function(req,res){
-    const {email,password}=req.body;
-    try{
-    let user=await userModel.findOne({email});
-    if(!user){
-        return res.status(500).send("user not exist");
+
+module.exports.loginUser = async function (req, res) {
+    const { email, password } = req.body;
+
+    try {
+        const user = await userModel.findOne({ email });
+
+        if (!user) {
+            return res.status(404).send("User does not exist.");
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).send("Invalid credentials.");
+        }
+
+        const token = generateToken({ email });
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        });
+
+        
+        return res.status(200).json({ message: "User login successfully", user: user,token});
+    } catch (err) {
+        console.error(err);
+        return res.status(500).send("Server error during login.");
     }
-     let result= await bcrypt.compare(password,user.password);
-     if(result){
-         let token= generateToken({email});
-   res.cookie("token",token,{
-    httpOnly:true,
-    secure:true,
-    maxAge:30*24*60*60*1000
-   })
-   res.status(201).send("logged in succesfully");
-}else{
-    return res.status(500).send("user not exist");
-}
-}catch(err){
-    res.status(500).send(err)
-}
 };
-module.exports.logoutUser=function(req,res){
-    res.cookie("token","",{
-    httpOnly:true,
-    secure:true,
-   })
-   res.status(201).send("logout succesfully");
+
+module.exports.logoutUser = function (req, res) {
+    res.cookie("token", "", {
+        httpOnly: true,
+        secure: true,
+        expires: new Date(0),
+    });
+
+    return res.status(200).send("Logged out successfully.");
 };
-module.exports.getUserProfile=function(req,res){
-    res.send("User loggin")
+
+module.exports.getUserProfile = function (req, res) {
+    // Assume `req.user` is set by authentication middleware
+    if (!req.user) {
+        return res.status(401).send("Unauthorized");
+    }
+
+    res.status(200).json({ user: req.user });
 };
-module.exports.googleOauth=function(req,res){
-    
-}
+
+// Optional placeholder for Google OAuth
+module.exports.googleOauth = function (req, res) {
+    res.status(501).send("Google OAuth not implemented yet.");
+};

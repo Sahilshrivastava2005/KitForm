@@ -15,5 +15,9 @@ router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.get('/logout', logoutUser);
 router.get('/profile', protect,getUserProfile);
-router.get('/google/callback',passport.authenticate("google",{scope:["profile"]}))
+router.get('/google', passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get('/google/callback',
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  googleOauth // your controller function after successful login
+);
 module.exports = router;

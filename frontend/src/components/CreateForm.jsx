@@ -1,14 +1,17 @@
 import React from 'react'
 import Create from './Create'
 
+import Myform from "./Myform";
+
 export default function CreateForm() {
   return (
-    <div>
-     <div className="flex items-center justify-between mb-6 p-8">
-  <h1 className="text-4xl font-bold">DashBoard</h1>
-  <Create/>
-</div>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <Create />
+      </div>
 
+      <Myform />
     </div>
-  )
+  );
 }

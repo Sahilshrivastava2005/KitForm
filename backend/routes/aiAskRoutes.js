@@ -1,19 +1,46 @@
 const express = require('express');
 const router = express.Router();
 const { runGemini } = require('../config/gemini'); 
-const discription="On the basis of Discription please give me form in json format with form title form subheading form field form name placeholder name and form label in json format"
+const User = require('../models/user-model');
+
+const description = "On the basis of the description, return ONLY raw JSON.No markdown, no triple backticks, no extra text.Include: formTitle, formSubheading, formName, and formFields (array).Each formField must have: fieldName, formLabel(required), placeholder (if needed), type, and required.If type is radio or select, include options with { label, value }.";
+
 router.post("/ask", async (req, res) => {
   try {
-    const prompt = req.body.prompt;
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
+    const { prompt, userId } = req.body;
+
+    if (!prompt || !userId) {
+      return res.status(400).json({ error: "Prompt and userId are required" });
     }
-    const answer = await runGemini("Discription:"+prompt+". "+discription);
-    
-    res.json({ answer });
+
+    const geminiRaw = await runGemini("Description: " + prompt + ". " + description);
+
+    const cleanedJson = typeof geminiRaw === 'string'
+      ? geminiRaw.replace(/```json|```/g, '').trim()
+      : geminiRaw;
+
+    let generatedForm;
+    try {
+      generatedForm = typeof cleanedJson === 'string' ? JSON.parse(cleanedJson) : cleanedJson;
+    } catch (parseErr) {
+      return res.status(400).json({ error: "Invalid JSON from Gemini", details: parseErr.message });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $push: { forms: generatedForm } },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ success: true, savedForm: generatedForm });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Gemini failed" });
+    console.error("Gemini or DB error:", err.message);
+    res.status(500).json({ error: "Gemini or DB error", message: err.message });
   }
 });
 
